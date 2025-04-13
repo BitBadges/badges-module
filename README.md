@@ -30,6 +30,14 @@ import (
 )
 ```
 
+## Structure
+
+The module is structured as follows:
+
+- `x/badges`: All core logic is here
+- `app`: This is just the most basic little dependency injection setup used for testing.
+- `api`: API types for the module
+
 ## Usage
 
 This is a standard Cosmos SDK module. Apply it as such in your app.go file.
