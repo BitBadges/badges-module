@@ -15,7 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	simapp "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -56,12 +55,8 @@ var DefaultConsensusParams = &tmproto.ConsensusParams{
 func Setup(
 	isCheckTx bool,
 ) *App {
-	privVal := mock.NewPV()
-	pubKey, _ := privVal.GetPubKey()
-
 	// create validator set with single validator
-	validator := tmtypes.NewValidator(pubKey, 824639203360100)
-	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
+	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{})
 
 	// generate genesis account
 	senderPrivKey := secp256k1.GenPrivKey()
