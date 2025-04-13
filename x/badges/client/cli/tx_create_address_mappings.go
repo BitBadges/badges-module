@@ -1,0 +1,52 @@
+package cli
+
+import (
+	"strconv"
+
+	"github.com/bitbadges/badges-module/x/badges/types"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/spf13/cobra"
+)
+
+var _ = strconv.Itoa(0)
+
+func CmdCreateAddressLists() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create-address-lists [tx-json]",
+		Short: "Broadcast message createAddressLists",
+		Args:  cobra.ExactArgs(1), // Accept exactly one argument (the JSON string)
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			// Retrieve the JSON string from the command-line argument
+			txJSON := args[0]
+
+			// Unmarshal the JSON into a transaction structure
+			var txData types.MsgCreateAddressLists
+			if err := jsonpb.UnmarshalString(txJSON, &txData); err != nil {
+				return err
+			}
+
+			// Validate the transaction data
+			if err := txData.ValidateBasic(); err != nil {
+				return err
+			}
+
+			txData.Creator = clientCtx.GetFromAddress().String()
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &txData)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+
+	return cmd
+}

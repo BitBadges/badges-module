@@ -1,0 +1,33 @@
+vue/node_modules
+vue/dist
+release/
+.idea/
+.vscode/
+.DS_Store
+*.dot
+*.log
+*.ign
+
+
+vue/node_modules
+vue/dist
+release/
+.idea/
+.vscode/
+.DS_Store
+
+x/badges/keeper/coverage*
+
+# Ignore all files starting with cover.
+cover.*
+
+commands.txt
+
+build/
+
+# We use the SDK for TS which also supports unique functionality to our chain like EIP-712 and Solana 
+ts-client/
+
+k8s/
+
+output.txt 
