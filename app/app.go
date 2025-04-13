@@ -8,16 +8,7 @@ import (
 	"cosmossdk.io/depinject"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
-	_ "cosmossdk.io/x/circuit" // import for side-effects
-	circuitkeeper "cosmossdk.io/x/circuit/keeper"
-	_ "cosmossdk.io/x/evidence" // import for side-effects
-	evidencekeeper "cosmossdk.io/x/evidence/keeper"
-	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
-	_ "cosmossdk.io/x/feegrant/module" // import for side-effects
 
-	_ "cosmossdk.io/x/upgrade" // import for side-effects
-
-	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	abci "github.com/cometbft/cometbft/abci/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -37,8 +28,6 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/x/auth/tx/config" // import for side-effects
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	_ "github.com/cosmos/cosmos-sdk/x/auth/vesting" // import for side-effects
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
-	_ "github.com/cosmos/cosmos-sdk/x/authz/module" // import for side-effects
 	_ "github.com/cosmos/cosmos-sdk/x/bank"         // import for side-effects
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	_ "github.com/cosmos/cosmos-sdk/x/consensus" // import for side-effects
@@ -53,8 +42,6 @@ import (
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	groupkeeper "github.com/cosmos/cosmos-sdk/x/group/keeper"
-	_ "github.com/cosmos/cosmos-sdk/x/group/module" // import for side-effects
 	_ "github.com/cosmos/cosmos-sdk/x/mint"         // import for side-effects
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	_ "github.com/cosmos/cosmos-sdk/x/params" // import for side-effects
@@ -106,19 +93,12 @@ type App struct {
 	DistrKeeper           distrkeeper.Keeper
 	ConsensusParamsKeeper consensuskeeper.Keeper
 
-	SlashingKeeper       slashingkeeper.Keeper
-	MintKeeper           mintkeeper.Keeper
-	GovKeeper            *govkeeper.Keeper
-	CrisisKeeper         *crisiskeeper.Keeper
-	UpgradeKeeper        *upgradekeeper.Keeper
-	ParamsKeeper         paramskeeper.Keeper
-	AuthzKeeper          authzkeeper.Keeper
-	EvidenceKeeper       evidencekeeper.Keeper
-	FeeGrantKeeper       feegrantkeeper.Keeper
-	GroupKeeper          groupkeeper.Keeper
-	CircuitBreakerKeeper circuitkeeper.Keeper
-
-	BadgesKeeper badgesmodulekeeper.Keeper
+	SlashingKeeper slashingkeeper.Keeper
+	MintKeeper     mintkeeper.Keeper
+	GovKeeper      *govkeeper.Keeper
+	CrisisKeeper   *crisiskeeper.Keeper
+	ParamsKeeper   paramskeeper.Keeper
+	BadgesKeeper   badgesmodulekeeper.Keeper
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// simulation manager
@@ -217,13 +197,7 @@ func New(
 		&app.MintKeeper,
 		&app.GovKeeper,
 		&app.CrisisKeeper,
-		&app.UpgradeKeeper,
 		&app.ParamsKeeper,
-		&app.AuthzKeeper,
-		&app.EvidenceKeeper,
-		&app.FeeGrantKeeper,
-		&app.GroupKeeper,
-		&app.CircuitBreakerKeeper,
 		&app.BadgesKeeper,
 		// this line is used by starport scaffolding # stargate/app/keeperDefinition
 	); err != nil {
@@ -236,7 +210,6 @@ func New(
 
 	// build app
 	app.App = appBuilder.Build(db, traceStore, baseAppOptions...)
-	app.BaseApp.SetCircuitBreaker(&app.CircuitBreakerKeeper)
 
 	// register streaming services
 	if err := app.RegisterStreamingServices(appOpts, app.kvStoreKeys()); err != nil {
@@ -258,9 +231,6 @@ func New(
 	// Manually set the module version map as shown below.
 	// The upgrade module will automatically handle de-duplication of the module version map.
 	app.SetInitChainer(func(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
-		if err := app.UpgradeKeeper.SetModuleVersionMap(ctx, app.ModuleManager.GetVersionMap()); err != nil {
-			return nil, err
-		}
 
 		return app.App.InitChainer(ctx, req)
 	})
