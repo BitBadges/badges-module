@@ -11,7 +11,7 @@ import (
 func (k msgServer) DeleteCollection(goCtx context.Context, msg *types.MsgDeleteCollection) (*types.MsgDeleteCollectionResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	creator, err := GetCreator(ctx, msg.Creator, msg.CreatorOverride)
+	creator, err := k.GetCreator(ctx, msg.Creator, msg.CreatorOverride)
 	if err != nil {
 		return nil, err
 	}

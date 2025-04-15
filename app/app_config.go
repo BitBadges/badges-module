@@ -212,8 +212,12 @@ var (
 				Config: appconfig.WrapAny(&consensusmodulev1.Module{}),
 			},
 			{
-				Name:   badgesmoduletypes.ModuleName,
-				Config: appconfig.WrapAny(&badgesmodulev1.Module{}),
+				Name: badgesmoduletypes.ModuleName,
+				Config: appconfig.WrapAny(&badgesmodulev1.Module{
+					ApprovedContractAddresses: []string{
+						"",
+					},
+				}),
 			},
 			// this line is used by starport scaffolding # stargate/app/moduleConfig
 		},

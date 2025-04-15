@@ -12,7 +12,7 @@ import (
 func (k msgServer) CreateCollection(goCtx context.Context, msg *types.MsgCreateCollection) (*types.MsgCreateCollectionResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	creator, err := GetCreator(ctx, msg.Creator, msg.CreatorOverride)
+	creator, err := k.GetCreator(ctx, msg.Creator, msg.CreatorOverride)
 	if err != nil {
 		return nil, err
 	}
