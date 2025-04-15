@@ -1,0 +1,17 @@
+syntax = "proto3";
+package badges.module;
+
+import "cosmos/app/v1alpha1/module.proto";
+
+// Module is the config object for the module.
+message Module {
+  option (cosmos.app.v1alpha1.module) = {
+    go_import: "github.com/bitbadges/badges-module/x/badges"
+  };
+
+  // authority defines the custom module authority. If not set, defaults to the governance module.
+  string authority = 1;
+
+  // approved_contract_addresses defines the list of contract addresses that are approved to override the creator.
+  repeated string approved_contract_addresses = 2;
+}

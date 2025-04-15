@@ -17,7 +17,7 @@ func (k Keeper) GetCreator(ctx sdk.Context, creator string, creatorOverride stri
 				return creatorOverride, nil
 			}
 		}
-		return "", fmt.Errorf("creatorOverride is not an approved contract address. If you want to override the creator, you must do so through an approved contract address. Otherwise, use the original creator.")
+		return "", fmt.Errorf("msg.Creator is not an approved contract address so using the creator override is not allowed. If you want to override the creator, you must do so through an approved contract address. Otherwise, use the original creator.")
 	}
 
 	// Otherwise, use the original creator
