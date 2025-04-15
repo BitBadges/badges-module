@@ -15,7 +15,13 @@ import (
 func (k msgServer) UniversalUpdateCollection(goCtx context.Context, msg *types.MsgUniversalUpdateCollection) (*types.MsgUniversalUpdateCollectionResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	err := msg.CheckAndCleanMsg(ctx, true)
+	creator, err := GetCreator(ctx, msg.Creator, msg.CreatorOverride)
+	if err != nil {
+		return nil, err
+	}
+	msg.Creator = creator
+
+	err = msg.CheckAndCleanMsg(ctx, true)
 	if err != nil {
 		return nil, err
 	}

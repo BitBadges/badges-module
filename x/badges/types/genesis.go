@@ -2,6 +2,8 @@ package types
 
 import (
 	types "cosmossdk.io/math"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
+	// this line is used by starport scaffolding # genesis/types/import
 )
 
 // DefaultIndex is the default capability global index
@@ -22,6 +24,10 @@ func DefaultGenesis() *GenesisState {
 
 // IMPORTANT: We assume badges are well-formed and validated here
 func (gs GenesisState) Validate() error {
+	if err := host.PortIdentifierValidator(gs.PortId); err != nil {
+		return err
+	}
+	// this line is used by starport scaffolding # genesis/types/validate
 
 	return gs.Params.Validate()
 }

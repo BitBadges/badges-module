@@ -10,7 +10,14 @@ import (
 
 func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpdateUserApprovals) (*types.MsgUpdateUserApprovalsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	err := msg.CheckAndCleanMsg(ctx, true)
+
+	creator, err := GetCreator(ctx, msg.Creator, msg.CreatorOverride)
+	if err != nil {
+		return nil, err
+	}
+	msg.Creator = creator
+
+	err = msg.CheckAndCleanMsg(ctx, true)
 	if err != nil {
 		return nil, err
 	}

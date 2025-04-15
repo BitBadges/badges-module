@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bitbadges/badges-module/x/badges/testutil/sample"
+
 	"github.com/stretchr/testify/require"
 )
 

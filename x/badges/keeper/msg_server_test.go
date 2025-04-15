@@ -7,8 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bitbadges/badges-module/x/badges/keeper"
-	keepertest "github.com/bitbadges/badges-module/x/badges/testutil/keeper"
 	"github.com/bitbadges/badges-module/x/badges/types"
+
+	keepertest "github.com/bitbadges/badges-module/x/badges/testutil/keeper"
 )
 
 func setupMsgServer(t testing.TB) (keeper.Keeper, types.MsgServer, context.Context) {

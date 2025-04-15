@@ -63,7 +63,7 @@ import (
 
 const (
 	AccountAddressPrefix = "bb"
-	Name                 = "bitbadgeschain"
+	Name                 = "badges-module"
 )
 
 var (

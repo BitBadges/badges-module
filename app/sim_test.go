@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	SimAppChainID = "bitbadgeschain-simapp"
+	SimAppChainID = "badges-module-simapp"
 )
 
 var FlagEnableStreamingValue bool

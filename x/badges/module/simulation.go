@@ -10,8 +10,9 @@ import (
 
 	"github.com/bitbadges/badges-module/x/badges/testutil/sample"
 
-	badgessimulation "github.com/bitbadges/badges-module/x/badges/simulation"
 	"github.com/bitbadges/badges-module/x/badges/types"
+
+	badgessimulation "github.com/bitbadges/badges-module/x/badges/simulation"
 )
 
 // avoid unused import issue
