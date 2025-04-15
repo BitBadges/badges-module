@@ -7,6 +7,10 @@ import (
 )
 
 func (k Keeper) GetCreator(ctx sdk.Context, creator string, creatorOverride string) (string, error) {
+	if creator == creatorOverride {
+		return creator, nil
+	}
+
 	// If creatorOverride is set, we need to verify actual creator is an approved contract address
 	// IMPORTANT: Approved contract addresses should never be allowed to specify alternate creators other than the initial signer themselves
 	// This is to prevent malicious contracts from overriding the creator
