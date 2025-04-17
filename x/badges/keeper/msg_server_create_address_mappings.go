@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/bitbadges/badges-module/x/badges/types"
 
@@ -24,10 +25,26 @@ func (k msgServer) CreateAddressLists(goCtx context.Context, msg *types.MsgCreat
 		}
 	}
 
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "create_address_lists"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+		),
+	)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("indexer",
+			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "create_address_lists"),
+			sdk.NewAttribute("msg", string(msgBytes)),
 		),
 	)
 

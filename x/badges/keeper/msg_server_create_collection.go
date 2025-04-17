@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/bitbadges/badges-module/x/badges/types"
 
@@ -52,6 +53,29 @@ func (k msgServer) CreateCollection(goCtx context.Context, msg *types.MsgCreateC
 	if err != nil {
 		return nil, err
 	}
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(sdk.EventTypeMessage,
+			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "create_collection"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+		),
+	)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("indexer",
+			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "create_collection"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+		),
+	)
 
 	return &types.MsgCreateCollectionResponse{
 		CollectionId: res.CollectionId,

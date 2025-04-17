@@ -23,7 +23,6 @@ func GetDefaultBalanceStoreForCollection(collection *types.BadgeCollection) *typ
 }
 
 func (k Keeper) GetBalanceOrApplyDefault(ctx sdk.Context, collection *types.BadgeCollection, userAddress string) *types.UserBalanceStore {
-
 	//Mint has unlimited balances
 	if userAddress == "Total" || userAddress == "Mint" {
 		return &types.UserBalanceStore{}
@@ -121,6 +120,28 @@ func (k Keeper) HandleTransfers(ctx sdk.Context, collection *types.BadgeCollecti
 
 			if err := k.SetBalanceForAddress(ctx, collection, to, toUserBalance); err != nil {
 				return err
+			}
+
+			if k.PayoutAddress != "" && k.FixedCostPerTransfer != "" {
+				cost, err := sdk.ParseCoinNormalized(k.FixedCostPerTransfer)
+				if err != nil {
+					return err
+				}
+
+				payoutAddressAcc, err := sdk.AccAddressFromBech32(k.PayoutAddress)
+				if err != nil {
+					return err
+				}
+
+				fromAddressAcc, err := sdk.AccAddressFromBech32(initiatedBy)
+				if err != nil {
+					return err
+				}
+
+				err = k.bankKeeper.SendCoins(ctx, fromAddressAcc, payoutAddressAcc, sdk.NewCoins(cost))
+				if err != nil {
+					return sdkerrors.Wrapf(err, "error completing required payout. each transfer costs %s", cost)
+				}
 			}
 		}
 

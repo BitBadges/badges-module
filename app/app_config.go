@@ -217,6 +217,7 @@ var (
 					ApprovedContractAddresses: []string{
 						"",
 					},
+					EnableCoinTransfers: true,
 				}),
 			},
 			// this line is used by starport scaffolding # stargate/app/moduleConfig

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -152,10 +153,27 @@ func (k msgServer) UniversalUpdateCollection(goCtx context.Context, msg *types.M
 		return nil, err
 	}
 
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "universal_update_collection"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+			sdk.NewAttribute("collectionId", fmt.Sprint(collection.CollectionId)),
+		),
+	)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("indexer",
+			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "universal_update_collection"),
+			sdk.NewAttribute("msg", string(msgBytes)),
 			sdk.NewAttribute("collectionId", fmt.Sprint(collection.CollectionId)),
 		),
 	)

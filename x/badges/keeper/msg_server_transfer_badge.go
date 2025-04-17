@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/bitbadges/badges-module/x/badges/types"
@@ -31,6 +32,7 @@ func (k msgServer) TransferBadges(goCtx context.Context, msg *types.MsgTransferB
 	if collectionId.Equal(sdkmath.NewUint(0)) {
 		nextCollectionId := k.GetNextCollectionId(ctx)
 		collectionId = nextCollectionId.Sub(sdkmath.NewUint(1))
+
 	}
 
 	collection, found := k.GetCollectionFromStore(ctx, collectionId)
@@ -51,12 +53,29 @@ func (k msgServer) TransferBadges(goCtx context.Context, msg *types.MsgTransferB
 		return nil, err
 	}
 
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
-			sdk.NewAttribute("collection_id", fmt.Sprint(collectionId)),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "transfer_badges"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+			sdk.NewAttribute("collectionId", fmt.Sprint(collectionId)),
 		),
 	)
 
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("indexer",
+			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
+			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
+			sdk.NewAttribute("msg_type", "transfer_badges"),
+			sdk.NewAttribute("msg", string(msgBytes)),
+			sdk.NewAttribute("collectionId", fmt.Sprint(collectionId)),
+		),
+	)
 	return &types.MsgTransferBadgesResponse{}, nil
 }
