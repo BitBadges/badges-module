@@ -206,6 +206,20 @@ func GetTransferableCollectionToCreateAllMintedToCreator(creator string) []*type
 					OwnershipTimes: GetFullUintRanges(),
 				},
 			},
+			PrioritizedApprovals: []*types.ApprovalIdentifierDetails{
+				{
+					ApprovalId:      GetBobApproval().ApprovalId,
+					ApprovalLevel:   "collection",
+					ApproverAddress: "",
+					Version:         sdkmath.NewUint(0),
+				},
+				{
+					ApprovalId:      "mint-test",
+					ApprovalLevel:   "collection",
+					ApproverAddress: "",
+					Version:         sdkmath.NewUint(0),
+				},
+			},
 		},
 	}
 

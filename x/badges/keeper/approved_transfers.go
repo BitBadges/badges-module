@@ -34,12 +34,15 @@ func (k Keeper) DeductAndGetUserApprovals(
 	fromAddress := transfer.From
 	originalTransferBalances = types.DeepCopyBalances(originalTransferBalances)
 	remainingBalances := types.DeepCopyBalances(transfer.Balances) //Keep a running tally of all the badges we still have to handle
-	approvals := SortViaPrioritizedApprovals(_approvals, transfer, approvalLevel, approverAddress)
+	approvals, err := SortViaPrioritizedApprovals(_approvals, transfer, approvalLevel, approverAddress)
+	if err != nil {
+		return []*UserApprovalsToCheck{}, err
+	}
 
 	//For each approved transfer, we check if the transfer is allowed
-	//1: If transfer meets all criteria, we deduct, get user approvals to check, and continue (if there are any remaining balances)
-	//2. If transfer does not meet all criteria, we continue and do not mark anything as handled
-	//3. At the end, if there are any unhandled transfers, we throw (not enough approvals = transfer disallowed)
+	// 1: If transfer meets all criteria, we deduct, get user approvals to check, and continue (if there are any remaining balances)
+	// 2. If transfer does not meet all criteria, we continue and do not mark anything as handled
+	// 3. At the end, if there are any unhandled transfers, we throw (not enough approvals = transfer disallowed)
 	userApprovalsToCheck := []*UserApprovalsToCheck{}
 	for _, approval := range approvals {
 		remainingBalances = types.FilterZeroBalances(remainingBalances)
@@ -97,8 +100,7 @@ func (k Keeper) DeductAndGetUserApprovals(
 			}
 
 			/**** SECTION 1: NO STORAGE WRITES (just simulate everything and continue if it doesn't pass) ****/
-
-			err := k.HandleCoinTransfers(ctx, approvalCriteria.CoinTransfers, initiatedBy, true) //simulate = true
+			err := k.HandleCoinTransfers(ctx, approvalCriteria.CoinTransfers, initiatedBy, approverAddress, true) //simulate = true
 			if err != nil {
 				continue
 			}
@@ -201,7 +203,7 @@ func (k Keeper) DeductAndGetUserApprovals(
 				continue
 			}
 
-			err = k.HandleCoinTransfers(ctx, approvalCriteria.CoinTransfers, initiatedBy, false) //simulate = false
+			err = k.HandleCoinTransfers(ctx, approvalCriteria.CoinTransfers, initiatedBy, approverAddress, false) //simulate = false
 			if err != nil {
 				return []*UserApprovalsToCheck{}, sdkerrors.Wrapf(err, "error handling coin transfers")
 			}
@@ -252,7 +254,7 @@ func (k Keeper) DeductAndGetUserApprovals(
 	//If we didn't find a successful approval, we throw
 	if len(remainingBalances) > 0 {
 		transferStr := "attempting to transfer badge ID " + remainingBalances[0].BadgeIds[0].Start.String()
-		return []*UserApprovalsToCheck{}, sdkerrors.Wrapf(ErrInadequateApprovals, "no approval found for transfer: %s", transferStr)
+		return []*UserApprovalsToCheck{}, sdkerrors.Wrapf(ErrInadequateApprovals, "no approval satisfied for transfer: %s", transferStr)
 	}
 
 	return userApprovalsToCheck, nil
@@ -383,10 +385,12 @@ func (k Keeper) handlePredeterminedBalances(
 	} else if predeterminedBalances.IncrementedBalances != nil {
 		i := predeterminedBalances.IncrementedBalances
 		calculatedBalances, err = types.IncrementBalances(
+			ctx,
 			i.StartBalances,
 			numIncrements,
 			i.IncrementOwnershipTimesBy,
 			i.IncrementBadgeIdsBy,
+			i.ApprovalDurationFromNow,
 		)
 		if err != nil {
 			return nil, err
@@ -707,6 +711,10 @@ func (k Keeper) GetPredeterminedBalancesForPrecalculationId(
 			continue
 		}
 
+		if !approval.Version.Equal(transfer.PrecalculateBalancesFromApproval.Version) {
+			return []*types.Balance{}, sdkerrors.Wrapf(types.ErrMismatchedVersions, "versions are mismatched for a prioritized approval")
+		}
+
 		if approvalCriteria.PredeterminedBalances != nil {
 			numIncrements := sdkmath.NewUint(0)
 			if approvalCriteria.PredeterminedBalances.OrderCalculationMethod.UseMerkleChallengeLeafIndex {
@@ -770,7 +778,7 @@ func (k Keeper) GetPredeterminedBalancesForPrecalculationId(
 				}
 			} else if approvalCriteria.PredeterminedBalances.IncrementedBalances != nil {
 				err := *new(error)
-				predeterminedBalances, err = types.IncrementBalances(approvalCriteria.PredeterminedBalances.IncrementedBalances.StartBalances, numIncrements, approvalCriteria.PredeterminedBalances.IncrementedBalances.IncrementOwnershipTimesBy, approvalCriteria.PredeterminedBalances.IncrementedBalances.IncrementBadgeIdsBy)
+				predeterminedBalances, err = types.IncrementBalances(ctx, approvalCriteria.PredeterminedBalances.IncrementedBalances.StartBalances, numIncrements, approvalCriteria.PredeterminedBalances.IncrementedBalances.IncrementOwnershipTimesBy, approvalCriteria.PredeterminedBalances.IncrementedBalances.IncrementBadgeIdsBy, approvalCriteria.PredeterminedBalances.IncrementedBalances.ApprovalDurationFromNow)
 				if err != nil {
 					return []*types.Balance{}, err
 				}

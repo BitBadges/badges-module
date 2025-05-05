@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/bitbadges/badges-module/x/badges/types"
+	"github.com/cosmos/gogoproto/proto"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -37,7 +39,7 @@ func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpda
 		return nil, ErrWrongBalancesType
 	}
 
-	userBalance := k.GetBalanceOrApplyDefault(ctx, collection, msg.Creator)
+	userBalance, appliedDefault := k.GetBalanceOrApplyDefault(ctx, collection, msg.Creator)
 	if userBalance.UserPermissions == nil {
 		userBalance.UserPermissions = &types.UserPermissions{}
 	}
@@ -46,14 +48,74 @@ func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpda
 		if err := k.ValidateUserOutgoingApprovalsUpdate(ctx, collection, userBalance.OutgoingApprovals, msg.OutgoingApprovals, userBalance.UserPermissions.CanUpdateOutgoingApprovals, msg.Creator); err != nil {
 			return nil, err
 		}
-		userBalance.OutgoingApprovals = msg.OutgoingApprovals
+
+		// Create a map of existing approvals for quick lookup
+		existingApprovals := make(map[string]*types.UserOutgoingApproval)
+		for _, approval := range userBalance.OutgoingApprovals {
+			existingApprovals[approval.ApprovalId] = approval
+		}
+
+		// If we didn't apply the default, we need to increment the versions only for changed approvals
+		if !appliedDefault {
+			newOutgoingApprovalsWithVersion := []*types.UserOutgoingApproval{}
+			for _, newApproval := range msg.OutgoingApprovals {
+				existingApproval, exists := existingApprovals[newApproval.ApprovalId]
+
+				// Only increment version if approval is new or changed
+				if !exists || !proto.Equal(existingApproval, newApproval) {
+					newVersion := k.IncrementApprovalVersion(ctx, collection.CollectionId, "outgoing", msg.Creator, newApproval.ApprovalId)
+					newApproval.Version = newVersion
+				} else {
+					// Keep existing version if approval hasn't changed
+					newApproval.Version = existingApproval.Version
+				}
+				newOutgoingApprovalsWithVersion = append(newOutgoingApprovalsWithVersion, newApproval)
+			}
+			userBalance.OutgoingApprovals = newOutgoingApprovalsWithVersion
+		} else {
+			// We did apply the default, so we need to ensure the version is kept at 0
+			for _, approval := range msg.OutgoingApprovals {
+				approval.Version = sdkmath.NewUint(0)
+			}
+			userBalance.OutgoingApprovals = msg.OutgoingApprovals
+		}
 	}
 
 	if msg.UpdateIncomingApprovals {
 		if err := k.ValidateUserIncomingApprovalsUpdate(ctx, collection, userBalance.IncomingApprovals, msg.IncomingApprovals, userBalance.UserPermissions.CanUpdateIncomingApprovals, msg.Creator); err != nil {
 			return nil, err
 		}
-		userBalance.IncomingApprovals = msg.IncomingApprovals
+
+		// Create a map of existing approvals for quick lookup
+		existingApprovals := make(map[string]*types.UserIncomingApproval)
+		for _, approval := range userBalance.IncomingApprovals {
+			existingApprovals[approval.ApprovalId] = approval
+		}
+
+		// If we didn't apply the default, we need to increment the versions only for changed approvals
+		if !appliedDefault {
+			newIncomingApprovalsWithVersion := []*types.UserIncomingApproval{}
+			for _, newApproval := range msg.IncomingApprovals {
+				existingApproval, exists := existingApprovals[newApproval.ApprovalId]
+
+				// Only increment version if approval is new or changed
+				if !exists || !proto.Equal(existingApproval, newApproval) {
+					newVersion := k.IncrementApprovalVersion(ctx, collection.CollectionId, "incoming", msg.Creator, newApproval.ApprovalId)
+					newApproval.Version = newVersion
+				} else {
+					// Keep existing version if approval hasn't changed
+					newApproval.Version = existingApproval.Version
+				}
+				newIncomingApprovalsWithVersion = append(newIncomingApprovalsWithVersion, newApproval)
+			}
+			userBalance.IncomingApprovals = newIncomingApprovalsWithVersion
+		} else {
+			// We did apply the default, so we need to ensure the version is kept at 0
+			for _, approval := range msg.IncomingApprovals {
+				approval.Version = sdkmath.NewUint(0)
+			}
+			userBalance.IncomingApprovals = msg.IncomingApprovals
+		}
 	}
 
 	if msg.UpdateAutoApproveSelfInitiatedIncomingTransfers && userBalance.AutoApproveSelfInitiatedIncomingTransfers != msg.AutoApproveSelfInitiatedIncomingTransfers {
@@ -72,6 +134,15 @@ func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpda
 			return nil, err
 		}
 		userBalance.AutoApproveSelfInitiatedOutgoingTransfers = msg.AutoApproveSelfInitiatedOutgoingTransfers
+	}
+
+	if msg.UpdateAutoApproveAllIncomingTransfers && userBalance.AutoApproveAllIncomingTransfers != msg.AutoApproveAllIncomingTransfers {
+		//Check permission is valid for current time
+		err = k.CheckIfActionPermissionPermits(ctx, userBalance.UserPermissions.CanUpdateAutoApproveAllIncomingTransfers, "can update auto approve all incoming transfers")
+		if err != nil {
+			return nil, err
+		}
+		userBalance.AutoApproveAllIncomingTransfers = msg.AutoApproveAllIncomingTransfers
 	}
 
 	if msg.UpdateUserPermissions {
@@ -97,7 +168,7 @@ func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpda
 		sdk.NewEvent(sdk.EventTypeMessage,
 			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
-			sdk.NewAttribute("msg_type", "update_user_approved_transfers"),
+			sdk.NewAttribute("msg_type", "update_user_approvals"),
 			sdk.NewAttribute("msg", string(msgBytes)),
 		),
 	)
@@ -106,7 +177,7 @@ func (k msgServer) UpdateUserApprovals(goCtx context.Context, msg *types.MsgUpda
 		sdk.NewEvent("indexer",
 			sdk.NewAttribute(sdk.AttributeKeyModule, "badges"),
 			sdk.NewAttribute(sdk.AttributeKeySender, msg.Creator),
-			sdk.NewAttribute("msg_type", "update_user_approved_transfers"),
+			sdk.NewAttribute("msg_type", "update_user_approvals"),
 			sdk.NewAttribute("msg", string(msgBytes)),
 		),
 	)

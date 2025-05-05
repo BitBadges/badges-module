@@ -972,6 +972,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentBaseCaseNoSplit() {
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1032,6 +1033,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalent() {
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1051,6 +1053,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalent() {
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1116,6 +1119,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparateBalances() 
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1176,6 +1180,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparateBalancesTwo
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1195,6 +1200,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparateBalancesTwo
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1222,6 +1228,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparatePredetermin
 			},
 			IncrementBadgeIdsBy:       sdkmath.NewUint(0),
 			IncrementOwnershipTimesBy: sdkmath.NewUint(0),
+			ApprovalDurationFromNow:   sdkmath.NewUint(0),
 		},
 		OrderCalculationMethod: &types.PredeterminedOrderCalculationMethod{
 			UseOverallNumTransfers: true,
@@ -1271,6 +1278,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparatePredetermin
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1291,6 +1299,7 @@ func (suite *TestSuite) TestSplittingIntoMultipleIsEquivalentSeparatePredetermin
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1318,6 +1327,7 @@ func (suite *TestSuite) TestSplitPredetrminedBalancesEquivalentButNotSameTransfe
 			},
 			IncrementBadgeIdsBy:       sdkmath.NewUint(0),
 			IncrementOwnershipTimesBy: sdkmath.NewUint(0),
+			ApprovalDurationFromNow:   sdkmath.NewUint(0),
 		},
 		OrderCalculationMethod: &types.PredeterminedOrderCalculationMethod{
 			UseOverallNumTransfers: true,
@@ -1373,6 +1383,7 @@ func (suite *TestSuite) TestSplitPredetrminedBalancesEquivalentButNotSameTransfe
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})
@@ -1462,6 +1473,7 @@ func (suite *TestSuite) TestGetMaxPossible() {
 						OwnershipTimes: GetFullUintRanges(),
 					},
 				},
+				PrioritizedApprovals: GetDefaultPrioritizedApprovals(suite.ctx, suite.app.BadgesKeeper, sdkmath.NewUint(1)),
 			},
 		},
 	})

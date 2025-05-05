@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (k Keeper) HandleCoinTransfers(ctx sdk.Context, coinTransfers []*types.CoinTransfer, initiatedBy string, simulate bool) error {
+func (k Keeper) HandleCoinTransfers(ctx sdk.Context, coinTransfers []*types.CoinTransfer, initiatedBy string, approverAddress string, simulate bool) error {
 	if len(coinTransfers) == 0 {
 		return nil
 	}
@@ -26,26 +26,54 @@ func (k Keeper) HandleCoinTransfers(ctx sdk.Context, coinTransfers []*types.Coin
 		}
 	}
 
-	//simulate the sdk.Coin transfers
-	initiatedByAcc := sdk.MustAccAddressFromBech32(initiatedBy)
-
 	if simulate {
-		spendableCoins := k.bankKeeper.SpendableCoins(ctx, initiatedByAcc)
+		spendableCoinsMap := make(map[string]sdk.Coins)
+		for _, coinTransfer := range coinTransfers {
+			fromAddress := initiatedBy
+			if coinTransfer.OverrideFromWithApproverAddress {
+				fromAddress = approverAddress
+				if fromAddress == "" {
+					return sdkerrors.Wrap(types.ErrInvalidAddress, "approver address is required when overrideFromWithApproverAddress is true")
+				}
+			}
+
+			spendableCoinsMap[fromAddress] = k.bankKeeper.SpendableCoins(ctx, sdk.MustAccAddressFromBech32(fromAddress))
+		}
+
 		for _, coinTransfer := range coinTransfers {
 			toTransfer := coinTransfer.Coins
+			fromAddress := initiatedBy
+			if coinTransfer.OverrideFromWithApproverAddress {
+				fromAddress = approverAddress
+			}
+
 			for _, coin := range toTransfer {
-				newCoins, underflow := spendableCoins.SafeSub(*coin)
+				newCoins, underflow := spendableCoinsMap[fromAddress].SafeSub(*coin)
 				if underflow {
 					return sdkerrors.Wrapf(types.ErrUnderflow, "insufficient $BADGE balance to complete transfer")
 				}
-				spendableCoins = newCoins
+				spendableCoinsMap[fromAddress] = newCoins
 			}
 		}
 	} else {
 		for _, coinTransfer := range coinTransfers {
 			coinsToTransfer := coinTransfer.Coins
-			toAddressAcc := sdk.MustAccAddressFromBech32(coinTransfer.To)
-			fromAddressAcc := initiatedByAcc
+
+			to := coinTransfer.To
+			if coinTransfer.OverrideToWithInitiator {
+				to = initiatedBy
+			}
+
+			toAddressAcc := sdk.MustAccAddressFromBech32(to)
+			fromAddressAcc := sdk.MustAccAddressFromBech32(initiatedBy)
+			if coinTransfer.OverrideFromWithApproverAddress {
+				fromAddressAcc = sdk.MustAccAddressFromBech32(approverAddress)
+			}
+
+			if toAddressAcc.Equals(fromAddressAcc) {
+				return sdkerrors.Wrap(types.ErrInvalidAddress, "to address cannot be the same as from address for coin transfers")
+			}
+
 			for _, coin := range coinsToTransfer {
 				err := k.bankKeeper.SendCoins(ctx, fromAddressAcc, toAddressAcc, sdk.NewCoins(*coin))
 				if err != nil {

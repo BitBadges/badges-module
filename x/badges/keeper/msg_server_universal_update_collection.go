@@ -10,6 +10,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/gogoproto/proto"
 )
 
 // Legacy function that is all-inclusive (creates and updates)
@@ -91,6 +92,29 @@ func (k msgServer) UniversalUpdateCollection(goCtx context.Context, msg *types.M
 			return nil, err
 		}
 		collection.CollectionApprovals = msg.CollectionApprovals
+
+		// Create a map of existing approvals for quick lookup
+		existingApprovals := make(map[string]*types.CollectionApproval)
+		for _, approval := range collection.CollectionApprovals {
+			existingApprovals[approval.ApprovalId] = approval
+		}
+
+		// Only increment versions for approvals that have changed
+		newApprovalsWithVersion := []*types.CollectionApproval{}
+		for _, newApproval := range msg.CollectionApprovals {
+			existingApproval, exists := existingApprovals[newApproval.ApprovalId]
+
+			// Only increment version if approval is new or changed
+			if !exists || !proto.Equal(existingApproval, newApproval) {
+				newVersion := k.IncrementApprovalVersion(ctx, collection.CollectionId, "collection", "", newApproval.ApprovalId)
+				newApproval.Version = newVersion
+			} else {
+				// Keep existing version if approval hasn't changed
+				newApproval.Version = existingApproval.Version
+			}
+			newApprovalsWithVersion = append(newApprovalsWithVersion, newApproval)
+		}
+		collection.CollectionApprovals = newApprovalsWithVersion
 	}
 
 	if msg.UpdateCollectionMetadataTimeline {
@@ -135,9 +159,11 @@ func (k msgServer) UniversalUpdateCollection(goCtx context.Context, msg *types.M
 		collection.CustomDataTimeline = msg.CustomDataTimeline
 	}
 
-	collection, err = k.CreateBadges(ctx, collection, msg.BadgeIdsToAdd)
-	if err != nil {
-		return nil, err
+	if msg.UpdateValidBadgeIds {
+		collection, err = k.CreateBadges(ctx, collection, msg.ValidBadgeIds)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if msg.UpdateCollectionPermissions {

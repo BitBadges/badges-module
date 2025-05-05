@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bitbadges/badges-module/x/badges/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	sdkerrors "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
@@ -167,10 +168,10 @@ func CreateCollections(suite *TestSuite, ctx context.Context, collectionsToCreat
 
 			DefaultBalances: &types.UserBalanceStore{
 				Balances:          collectionToCreate.DefaultBalances,
-				OutgoingApprovals: collectionToCreate.DefaultOutgoingApprovals,
-				IncomingApprovals: collectionToCreate.DefaultIncomingApprovals,
-				AutoApproveSelfInitiatedOutgoingTransfers: !collectionToCreate.DefaultDisapproveSelfInitiated,
-				AutoApproveSelfInitiatedIncomingTransfers: !collectionToCreate.DefaultDisapproveSelfInitiated,
+				OutgoingApprovals: []*types.UserOutgoingApproval{},
+				IncomingApprovals: []*types.UserIncomingApproval{},
+				AutoApproveSelfInitiatedOutgoingTransfers: true,
+				AutoApproveSelfInitiatedIncomingTransfers: true,
 				UserPermissions: nil,
 			},
 
@@ -180,10 +181,11 @@ func CreateCollections(suite *TestSuite, ctx context.Context, collectionsToCreat
 			// InheritedCollectionId: collectionToCreate.InheritedCollectionId,
 			CustomDataTimeline: collectionToCreate.CustomDataTimeline,
 			StandardsTimeline:  collectionToCreate.StandardsTimeline,
-			BadgeIdsToAdd:      allBadgeIds,
+			ValidBadgeIds:      allBadgeIds,
 			// IsArchivedTimeline: collectionToCreate.IsArchivedTimeline,
 
 			// ManagerTimeline: collectionToCreate.ManagerTimeline,
+			UpdateValidBadgeIds:         true,
 			UpdateCollectionPermissions: true,
 			// UpdateManagerTimeline: true,
 			UpdateCollectionMetadataTimeline:       true,
@@ -194,6 +196,57 @@ func CreateCollections(suite *TestSuite, ctx context.Context, collectionsToCreat
 			UpdateCollectionApprovals: true,
 			UpdateStandardsTimeline:   true,
 			// UpdateIsArchivedTimeline: true,
+		})
+		if err != nil {
+			return err
+		}
+
+		//Update for bob
+		err = UpdateUserApprovals(suite, ctx, &types.MsgUpdateUserApprovals{
+			Creator:                 bob,
+			CollectionId:            collectionRes.CollectionId,
+			OutgoingApprovals:       collectionToCreate.DefaultOutgoingApprovals,
+			IncomingApprovals:       collectionToCreate.DefaultIncomingApprovals,
+			UpdateOutgoingApprovals: true,
+			UpdateIncomingApprovals: true,
+			UpdateAutoApproveSelfInitiatedOutgoingTransfers: true,
+			UpdateAutoApproveSelfInitiatedIncomingTransfers: true,
+			AutoApproveSelfInitiatedOutgoingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
+			AutoApproveSelfInitiatedIncomingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
+		})
+		if err != nil {
+			return err
+		}
+
+		//Update for alice
+		err = UpdateUserApprovals(suite, ctx, &types.MsgUpdateUserApprovals{
+			Creator:                 alice,
+			CollectionId:            collectionRes.CollectionId,
+			OutgoingApprovals:       collectionToCreate.DefaultOutgoingApprovals,
+			IncomingApprovals:       collectionToCreate.DefaultIncomingApprovals,
+			UpdateOutgoingApprovals: true,
+			UpdateIncomingApprovals: true,
+			UpdateAutoApproveSelfInitiatedOutgoingTransfers: true,
+			UpdateAutoApproveSelfInitiatedIncomingTransfers: true,
+			AutoApproveSelfInitiatedOutgoingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
+			AutoApproveSelfInitiatedIncomingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
+		})
+		if err != nil {
+			return err
+		}
+
+		//Update for charlie
+		err = UpdateUserApprovals(suite, ctx, &types.MsgUpdateUserApprovals{
+			Creator:                 charlie,
+			CollectionId:            collectionRes.CollectionId,
+			OutgoingApprovals:       collectionToCreate.DefaultOutgoingApprovals,
+			IncomingApprovals:       collectionToCreate.DefaultIncomingApprovals,
+			UpdateOutgoingApprovals: true,
+			UpdateIncomingApprovals: true,
+			UpdateAutoApproveSelfInitiatedOutgoingTransfers: true,
+			UpdateAutoApproveSelfInitiatedIncomingTransfers: true,
+			AutoApproveSelfInitiatedOutgoingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
+			AutoApproveSelfInitiatedIncomingTransfers:       !collectionToCreate.DefaultDisapproveSelfInitiated,
 		})
 		if err != nil {
 			return err
@@ -232,7 +285,8 @@ func MintAndDistributeBadges(suite *TestSuite, ctx context.Context, msg *types.M
 	_, err := suite.msgServer.UniversalUpdateCollection(ctx, &types.MsgUniversalUpdateCollection{
 		Creator:                                bob,
 		CollectionId:                           msg.CollectionId,
-		BadgeIdsToAdd:                          allBadgeIds,
+		UpdateValidBadgeIds:                    true,
+		ValidBadgeIds:                          allBadgeIds,
 		CollectionMetadataTimeline:             msg.CollectionMetadataTimeline,
 		UpdateCollectionMetadataTimeline:       true,
 		BadgeMetadataTimeline:                  msg.BadgeMetadataTimeline,
@@ -247,11 +301,18 @@ func MintAndDistributeBadges(suite *TestSuite, ctx context.Context, msg *types.M
 		return err
 	}
 
+	newTransfers := []*types.Transfer{}
+	for _, transfer := range msg.Transfers {
+		newTransfer := transfer
+		newTransfer.PrioritizedApprovals = GetDefaultPrioritizedApprovals(sdk.UnwrapSDKContext(ctx), suite.app.BadgesKeeper, msg.CollectionId)
+		newTransfers = append(newTransfers, newTransfer)
+	}
+
 	if len(msg.Transfers) > 0 {
 		_, err = suite.msgServer.TransferBadges(ctx, &types.MsgTransferBadges{
 			Creator:      bob,
 			CollectionId: msg.CollectionId,
-			Transfers:    msg.Transfers,
+			Transfers:    newTransfers,
 		})
 	}
 	return err

@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	sdkerrors "cosmossdk.io/errors"
 	"github.com/bitbadges/badges-module/x/badges/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -48,6 +49,10 @@ func (k Keeper) DeductUserIncomingApprovals(
 	initiatedBy string,
 	userBalance *types.UserBalanceStore,
 ) error {
+	if userBalance.AutoApproveAllIncomingTransfers {
+		return nil
+	}
+
 	currApprovals := userBalance.IncomingApprovals
 	if userBalance.AutoApproveSelfInitiatedIncomingTransfers {
 		currApprovals = AppendSelfInitiatedIncomingApproval(currApprovals, to)
@@ -104,7 +109,7 @@ func onlyCheckPrioritizedApprovals(transfer *types.Transfer, approvalLevel strin
 	return onlyCheckPrioritized
 }
 
-func SortViaPrioritizedApprovals(_approvals []*types.CollectionApproval, transfer *types.Transfer, approvalLevel string, approverAddress string) []*types.CollectionApproval {
+func SortViaPrioritizedApprovals(_approvals []*types.CollectionApproval, transfer *types.Transfer, approvalLevel string, approverAddress string) ([]*types.CollectionApproval, error) {
 	prioritizedApprovals := transfer.PrioritizedApprovals
 	onlyCheckPrioritized := onlyCheckPrioritizedApprovals(transfer, approvalLevel)
 
@@ -136,5 +141,34 @@ func SortViaPrioritizedApprovals(_approvals []*types.CollectionApproval, transfe
 		approvals = append(prioritizedTransfers, approvals...)
 	}
 
-	return approvals
+	//Filter approvals where approvalCriteria != nil and not in prioritizedApprovals
+	filteredApprovals := []*types.CollectionApproval{}
+	for _, approval := range approvals {
+		if approval.ApprovalCriteria == nil || types.CollectionApprovalHasNoSideEffects(approval.ApprovalCriteria) {
+			filteredApprovals = append(filteredApprovals, approval)
+			continue
+		}
+
+		prioritized := false
+		for _, prioritizedApproval := range prioritizedApprovals {
+			if approval.ApprovalId == prioritizedApproval.ApprovalId && prioritizedApproval.ApprovalLevel == approvalLevel && approverAddress == prioritizedApproval.ApproverAddress {
+				if prioritizedApproval.Version.IsNil() {
+					return nil, sdkerrors.Wrapf(types.ErrUintUnititialized, "version is uninitialized")
+				}
+
+				if !prioritizedApproval.Version.Equal(approval.Version) {
+					return nil, sdkerrors.Wrapf(types.ErrMismatchedVersions, "versions are mismatched for a prioritized approval %s %s %s", prioritizedApproval.ApprovalId, prioritizedApproval.ApproverAddress, prioritizedApproval.ApprovalLevel)
+				}
+
+				prioritized = true
+				break
+			}
+		}
+
+		if prioritized {
+			filteredApprovals = append(filteredApprovals, approval)
+		}
+	}
+
+	return filteredApprovals, nil
 }
