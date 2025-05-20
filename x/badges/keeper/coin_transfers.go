@@ -70,10 +70,6 @@ func (k Keeper) HandleCoinTransfers(ctx sdk.Context, coinTransfers []*types.Coin
 				fromAddressAcc = sdk.MustAccAddressFromBech32(approverAddress)
 			}
 
-			if toAddressAcc.Equals(fromAddressAcc) {
-				return sdkerrors.Wrap(types.ErrInvalidAddress, "to address cannot be the same as from address for coin transfers")
-			}
-
 			for _, coin := range coinsToTransfer {
 				err := k.bankKeeper.SendCoins(ctx, fromAddressAcc, toAddressAcc, sdk.NewCoins(*coin))
 				if err != nil {
